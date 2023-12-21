@@ -14,12 +14,12 @@ def get_create_db_kb() -> types.ReplyKeyboardMarkup:
     )
 
 
-def get_scan_barcode_kb() -> types.InlineKeyboardMarkup:
-    kb = InlineKeyboardBuilder()
+def get_scan_barcode_kb() -> types.ReplyKeyboardMarkup:
+    kb = ReplyKeyboardBuilder()
     kb.button(text="Назад", callback_data="back_from_scan_barcode")
     kb.adjust(1)
-    kb.button(text="Штрихкод есть", callback_data="barcode_exist")
-    kb.button(text="Штрихкода нет", callback_data="barcode_not_exist")
+    kb.button(text="Штрихкод есть") #, callback_data="barcode_exist")
+    kb.button(text="Штрихкода нет") #, callback_data="barcode_not_exist")
     kb.adjust(1, 2)
     return kb.as_markup(
         resize_keyboard=True,
@@ -27,21 +27,13 @@ def get_scan_barcode_kb() -> types.InlineKeyboardMarkup:
     )
 
 
-def get_scan_barcode_not_exist_kb() -> types.ReplyKeyboardMarkup:
-
+def get_upload_barcode_kb() -> types.ReplyKeyboardMarkup:
     kb = ReplyKeyboardBuilder()
-    """
-    Идея: можно потом кнопки-картинки сделать, чтобы работник видел что такое тара,
-    а что такое обрешетка.
-    """
-    kb.button(text="Назад", callback_data="back_from_scan_barcode_not_exist")
+    kb.button(text="Назад") #, callback_data="back_from_scan_barcode_not_exist")
     kb.adjust(1)
-    kb.button(text="Тара", callback_data="tare")
-    kb.button(text="Обрешетка", callback_data="grate")
-    kb.adjust(1, 2)
     return kb.as_markup(
         resize_keyboard=True,
-        input_field_placeholder="Части еврокуба"
+        input_field_placeholder="Пришлите фотографию штрихкода или нажмите 'назад'"
     )
 
 
@@ -51,11 +43,22 @@ def get_show_db_kb() -> types.InlineKeyboardMarkup:
 
     # логика получения списка таблиц БД
     # вместе с их названиями...
-
-    for i in range(1, 9):
-        kb.button(text=f"Таблица {str(i)}", callback_data=f"table_{str(i)}")
-
-    kb.adjust(2)
+    # этот словарик должен быть в базе по идее
+    tables_name = {
+        "barcodes": "Штрихкоды",
+        "eurocube_barcodes": "Штрихкод-еврокуб",
+        "eurocubes": "Еврокубы",
+        "actions": "События",
+        "products": "Товары",
+        "order_list": "Товары в заказе",
+        "orders": "Заказы",
+        "partners": "Клиенты"
+    }
+    kb.button(text="Назад", callback_data="back_from_show_bd")
+    kb.adjust(1)
+    for eng_name, rus_name in tables_name.items():
+        kb.button(text=rus_name, callback_data=eng_name)
+    kb.adjust(1, 2)
     return kb.as_markup(
         resize_keyboard=True,
         input_field_placeholder="Выберите таблицу из списка"

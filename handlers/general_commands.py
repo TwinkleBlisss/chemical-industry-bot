@@ -1,12 +1,17 @@
 from aiogram import types, F, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from random import randint
 from keyboards.general_keyboards import (
     get_bot_info_kb,
     get_random_kb
 )
 import text
+
+"""
+Здесь будут команды start / help / bot_info и тд
+"""
 
 router = Router()
 
@@ -62,3 +67,13 @@ async def cmd_random(message: types.Message):
 async def send_random_value(callback: types.CallbackQuery):
     await callback.message.answer(str(randint(1, 10)))
     await callback.answer()
+
+
+@router.message(Command("cancel"))
+async def cmd_cancel(message: types.Message, state: FSMContext):
+    # статус пользователя -> None
+    await state.clear()
+    await message.answer(
+        "Вы прервали текущую операцию.",
+         reply_markup=types.ReplyKeyboardRemove()
+    )

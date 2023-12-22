@@ -4,7 +4,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from config_reader import config
-from handlers import general_commands, work_commands, scanning_barcodes
+from handlers import general_commands, db_commands, scanning_barcodes
 
 
 # Запуск процесса пуллинга новых апдейтов
@@ -21,7 +21,7 @@ async def main():
     # Роутеры (должны быть указаны в нужной последовательности!)
     dp.include_routers(
         general_commands.router,
-        work_commands.router,
+        db_commands.router,
         scanning_barcodes.router
     )
 

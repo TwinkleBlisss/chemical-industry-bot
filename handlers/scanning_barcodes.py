@@ -3,11 +3,16 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aspose.barcode import barcoderecognition
-from keyboards.work_keyboards import (
+from keyboards.scanning_keyboards import (
     get_scan_barcode_kb,
-    get_upload_barcode_kb
+    get_upload_barcode_kb,
+    get_eurocube_found_kb,
+    get_change_status_kb,
+    get_waiting_order_id_kb,
+    get_products_names_kb
 )
 import os
+import text
 
 
 """
@@ -22,10 +27,17 @@ class ScanBarcode(StatesGroup):
     waiting_for_new_photo = State()
     waiting_for_existing_photo = State()
     eurocube_found = State()
+    waiting_for_add_photo = State()
+    waiting_for_status = State()
+    waiting_for_order_id = State()
+    waiting_for_product = State()
 
 
 # /scan_barcode
 @router.message(StateFilter(None), Command("scan_barcode"))
+@router.message(ScanBarcode.waiting_for_existing_photo, F.text.lower() == "назад")
+@router.message(ScanBarcode.waiting_for_new_photo, F.text.lower() == "назад")
+@router.message(ScanBarcode.eurocube_found, F.text.startswith("Выйти"))
 async def cmd_scan_barcode(message: types.Message, state: FSMContext):
     await message.answer(
         "Вы перешли в режим сканирования штрихкодов. "
@@ -62,13 +74,45 @@ async def scan_barcode_exist(message: types.Message, state: FSMContext):
 @router.message(ScanBarcode.choosing_barcode_existance, F.text.endswith("нет"))
 async def scan_barcode_not_exist(message: types.Message, state: FSMContext):
     await message.answer(
-        "Ничего страшного! Давайте добавим этот еврокуб в базу.\n"
-        "Прикрепите новый штрихкод на еврокуб, сфотографируйте его и"
+        "Ничего страшного! Давайте добавим этот еврокуб в базу.\n\n"
+        "Прикрепите новый штрихкод на еврокуб, сфотографируйте его и "
         "пришлите следующим сообщением.",
         reply_markup=get_upload_barcode_kb()
     )
     # статус пользователя -> ожидание фото штрихкода нового куба
     await state.set_state(ScanBarcode.waiting_for_new_photo)
+
+
+@router.message(
+    ScanBarcode.choosing_barcode_existance,
+    ~F.text.endswith(("есть", "нет"))
+)
+async def unknown_command(message: types.Message):
+    await message.answer("Такой команды нет, либо она недоступна в данный момент. Попробуйте ещё раз")
+
+
+def barcode_recognizing(path):
+    """
+    Возвращает номер штрихкода с изображения, лежащего в path.
+    """
+
+    # Инициализировать считыватель штрих-кода
+    reader = barcoderecognition.BarCodeReader(path)
+    # Чтение штрих-кодов (по умолчанию он на фотографии один)
+    recognized_results = reader.read_bar_codes()
+    # получение результата
+    barcode_id = recognized_results[0].code_text
+    """
+    # переименовывание файла
+    try:
+        os.rename(path, f"tmp/{barcode_id}.jpg")
+    except FileNotFoundError:
+        print("Файл не найден")
+    except PermissionError:
+        print("Нет доступа для переименования файла")
+    """
+
+    return barcode_id
 
 
 @router.message(ScanBarcode.waiting_for_existing_photo, F.photo)
@@ -80,7 +124,14 @@ async def existing_barcode(message: types.Message, state: FSMContext, bot: Bot):
     )
     # сканируем штрихкод
     barcode_id = barcode_recognizing(path)
-    # регистрируем нужный еврокуб
+
+    # тут нужно будет удалить новое фото, так как фото этого штрихкода уже есть в базе
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
+    # ищем нужный еврокуб
     eurocube_id = 719243
 
     """
@@ -93,32 +144,14 @@ async def existing_barcode(message: types.Message, state: FSMContext, bot: Bot):
         f"Еврокуб с id={eurocube_id} успешно идентифицирован по штрихкоду с id={barcode_id}!",
         reply_markup=types.ReplyKeyboardRemove()
     )
-    await state.update_data(eurocube_found=eurocube_id)
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+    # await state.update_data(eurocube_found=eurocube_id)
+    await state.update_data(barcode_found=barcode_id)
     # статус пользователя -> куб найден
     await state.set_state(ScanBarcode.eurocube_found)
-
-
-def barcode_recognizing(path):
-    """
-    Возвращает номер штрихкода с изображения, лежащего в path,
-    и переименовывает файл в соответствии с этим номером.
-    """
-
-    # Инициализировать считыватель штрих-кода
-    reader = barcoderecognition.BarCodeReader(path)
-    # Чтение штрих-кодов (по умолчанию он на фотографии один)
-    recognized_results = reader.read_bar_codes()
-    # получение результата
-    barcode_id = recognized_results[0].code_text
-    # переименовывание файла
-    try:
-        os.rename(path, f"tmp/{barcode_id}.jpg")
-    except FileNotFoundError:
-        print("Файл не найден")
-    except PermissionError:
-        print("Нет доступа для переименования файла")
-
-    return barcode_id
 
 
 @router.message(ScanBarcode.waiting_for_new_photo, F.photo)
@@ -130,27 +163,180 @@ async def new_barcode(message: types.Message, state: FSMContext, bot: Bot):
     )
     # сканируем штрихкод
     barcode_id = barcode_recognizing(path)
+
+    # удаляем фото
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
     # регистрируем нужный еврокуб
     eurocube_id = 719243
 
     """
     Здесь мы обращаемся к бд, чтобы:
-    1) Сохранить туда фото штрихкода.
-    2) Создать объект штрихкода, еврокуба и их связи.
+    1) Создать объект штрихкода, еврокуба и их связи.
     *) Установить статус еврокуба.
     """
     await message.reply(
         f"Еврокуб с id={eurocube_id} успешно зарегистрирован по штрихкоду с id={barcode_id}!",
         reply_markup=types.ReplyKeyboardRemove()
     )
-    await state.update_data(eurocube_found=eurocube_id)
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+    # await state.update_data(eurocube_found=eurocube_id)
+    await state.update_data(barcode_found=barcode_id)
     # статус пользователя -> куб найден
     await state.set_state(ScanBarcode.eurocube_found)
 
 
-# @router.message(ScanBarcode.waiting_for_existing_photo | ScanBarcode.waiting_for_new_photo)
-# async def not_a_photo(message: types.Message, state: FSMContext):
+@router.message(ScanBarcode.waiting_for_existing_photo, ~F.photo)
+@router.message(ScanBarcode.waiting_for_new_photo, ~F.photo)
+@router.message(ScanBarcode.waiting_for_add_photo, ~F.photo, F.text.lower() != "назад")
+async def not_a_photo(message: types.Message):
+    await message.answer("Это не фото! Попробуйте ещё раз")
 
 
-# @router.message(ScanBarcode.eurocube_found)
-# async def
+@router.message(ScanBarcode.waiting_for_add_photo, F.text.lower() == "назад")
+@router.message(ScanBarcode.waiting_for_status, F.text.lower() == "назад")
+async def menu_eurocube(message: types.Message, state: FSMContext):
+    await state.set_state(ScanBarcode.eurocube_found)
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+@router.message(ScanBarcode.eurocube_found, F.text.startswith("Добавить"))
+async def add_barcode(message: types.Message, state: FSMContext):
+    await message.answer(
+        "Пришлите мне штрихкод, который вы хотите добавить к этому еврокубу",
+        reply_markup=get_upload_barcode_kb()
+    )
+    # статус пользователя -> ожидание фото дополнительного штрихкода куба
+    await state.set_state(ScanBarcode.waiting_for_add_photo)
+@router.message(ScanBarcode.waiting_for_add_photo, F.photo)
+async def upload_additional_barcode(message: types.Message, state: FSMContext, bot: Bot):
+    path = f"tmp/{message.photo[-1].file_id}.jpg"
+    await bot.download(
+        message.photo[-1],
+        destination=path
+    )
+
+    data = await state.get_data()
+    eurocube_id = data['barcode_found'] # ЭТО ТЕСТ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+
+    # сканируем штрихкод
+    barcode_id = barcode_recognizing(path)
+
+    # удаляем фото
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+
+    """
+    В БД добавляем новый штрихкод в barcodes, указывая текущий eurocube_id.
+    """
+
+    await message.reply(
+        f"Штрихкод с id={barcode_id} успешно добавлен к еврокубу с id={eurocube_id}\n\n(ЭТО ТЕСТ)", # ЭТО ТЕСТ!!!!!
+        reply_markup=types.ReplyKeyboardRemove()
+    )
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+    # статус пользователя -> куб найден
+    await state.set_state(ScanBarcode.eurocube_found)
+@router.message(ScanBarcode.eurocube_found, F.text.startswith("Изменить"))
+@router.message(ScanBarcode.waiting_for_order_id, F.text.lower() == "назад")
+@router.message(ScanBarcode.waiting_for_product, F.text.lower() == "назад")
+async def change_status(message: types.Message, state: FSMContext):
+    # статус пользователя -> ожидание выбора статуса
+    await state.set_state(ScanBarcode.waiting_for_status)
+    await message.answer(
+        "Выберите текущий статус еврокуба",
+        reply_markup=get_change_status_kb()
+    )
+@router.message(ScanBarcode.waiting_for_status, F.text.startswith("Прибыл"))
+async def status_arrived(message: types.Message, state: FSMContext):
+    a=1
+    """
+    В БД  в таблицу actions добавляется запись о статусе куба (arrived).
+    """
+    await message.reply("Статус записан!")
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+    # статус пользователя -> действия с еврокубом
+    await state.set_state(ScanBarcode.eurocube_found)
+@router.message(ScanBarcode.waiting_for_status, F.text.startswith("Уезжает"))
+async def status_leaves(message: types.Message, state: FSMContext):
+    a=1
+    """
+    В БД  в таблицу actions добавляется запись о статусе куба (leaves).
+    """
+    await message.reply(
+        "Статус записан! Теперь введите номер заказа",
+        reply_markup=get_waiting_order_id_kb()
+    )
+    # статус пользователя -> ожидание номера заказа
+    await state.set_state(ScanBarcode.waiting_for_order_id)
+@router.message(ScanBarcode.waiting_for_order_id, F.text.isdecimal())
+async def waiting_for_order_id(message: types.Message, state: FSMContext):
+    a=1
+    """
+    Ищем в БД заказ по id.
+    """
+    # order_id = # запрос в бд
+    order_id = 1 # типа ЕСТЬ заказ ТЕСТ!!!!!!!!!!!!!!!!
+    if not order_id:
+        await message.reply(
+            "Такого заказа нет в базе. Введите заново или нажмите 'назад'.",
+            reply_markup=get_waiting_order_id_kb()
+        )
+    else:
+        # статус пользователя -> ожидание названия химиката
+        await state.set_state(ScanBarcode.waiting_for_product)
+        await message.answer(
+            "Заказ найден! Теперь выберите химикат, который зальют в еврокуб.",
+            reply_markup=get_products_names_kb()
+        )
+@router.message(ScanBarcode.waiting_for_order_id, ~F.text.isdecimal())
+async def incorrect_order_id(message: types.Message):
+    await message.reply(
+        "С номером заказа что-то не так. Попробуйте ещё раз"
+    )
+@router.message(ScanBarcode.waiting_for_product, F.text.in_(text.chemicals))
+async def product_selected(message: types.Message, state: FSMContext):
+    a=0
+    """
+    В БД обновляется таблица order_list. Меняется стоимость заказа.
+    """
+    await message.reply("Химикат выбран!")
+    await message.answer(
+        "Что вы хотите сделать с еврокубом?",
+        reply_markup=get_eurocube_found_kb()
+    )
+    # статус пользователя -> действия с еврокубом
+    await state.set_state(ScanBarcode.eurocube_found)
+@router.message(ScanBarcode.waiting_for_product, ~F.text.in_(text.chemicals))
+async def product_selected(message: types.Message):
+    await message.reply("Такого химиката в базе нет. Попробуйте ещё раз")
+
+
+
+@router.message(
+    ScanBarcode.eurocube_found,
+    ~F.text.startswith(("Выйти", "Добавить", "Изменить"))
+)
+@router.message(
+    ScanBarcode.waiting_for_status,
+    ~F.text.startswith(("Назад", "Прибыл", "Уезжает"))
+)
+async def unknown_barcode_command(message: types.Message):
+    await message.answer(
+        "Такого действия нет! Попробуйте ещё раз"
+    )

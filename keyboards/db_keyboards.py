@@ -31,3 +31,19 @@ def get_show_db_kb() -> types.ReplyKeyboardMarkup:
         resize_keyboard=True,
         input_field_placeholder="Выберите таблицу из списка"
     )
+
+def get_table_menu_kb(table_name: str) -> types.ReplyKeyboardMarkup:
+    """Клавиатура для команды вывода списка таблиц."""
+    kb = ReplyKeyboardBuilder()
+
+    kb.button(text="Назад")
+    kb.button(text="Показать содержимое")
+    kb.button(text="Внести запись")
+    kb.button(text="Заменить запись")
+    kb.button(text="Удалить запись")
+    kb.button(text="Очистить таблицу")
+    kb.adjust(2)
+    return kb.as_markup(
+        resize_keyboard=True,
+        input_field_placeholder=f"Таблица {table_name}"
+    )

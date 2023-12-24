@@ -67,7 +67,7 @@ async def send_random_value(callback: types.CallbackQuery):
 async def cmd_cancel(message: types.Message):
     await message.answer(
         "Отменять нечего",
-         reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove()
     )
 
 
@@ -77,7 +77,7 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
     await state.clear()
     await message.answer(
         "Вы прервали текущую операцию.",
-         reply_markup=types.ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove()
     )
 
 

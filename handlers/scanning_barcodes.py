@@ -1,7 +1,6 @@
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import StatesGroup, State
 from aspose.barcode import barcoderecognition
 from keyboards.scanning_keyboards import (
     get_scan_barcode_kb,
@@ -11,8 +10,10 @@ from keyboards.scanning_keyboards import (
     get_waiting_order_id_kb,
     get_products_names_kb
 )
-import os
+from states import DBStates, ScanBarcode
 import text
+import os
+
 
 
 """
@@ -22,19 +23,8 @@ import text
 router = Router()
 
 
-class ScanBarcode(StatesGroup):
-    choosing_barcode_existance = State()
-    waiting_for_new_photo = State()
-    waiting_for_existing_photo = State()
-    eurocube_found = State()
-    waiting_for_add_photo = State()
-    waiting_for_status = State()
-    waiting_for_order_id = State()
-    waiting_for_product = State()
-
-
 # /scan_barcode
-@router.message(StateFilter(None), Command("scan_barcode"))
+@router.message(DBStates.db_exist, Command("scan_barcode"))
 @router.message(ScanBarcode.waiting_for_existing_photo, F.text.lower() == "назад")
 @router.message(ScanBarcode.waiting_for_new_photo, F.text.lower() == "назад")
 @router.message(ScanBarcode.eurocube_found, F.text.startswith("Выйти"))
@@ -47,16 +37,22 @@ async def cmd_scan_barcode(message: types.Message, state: FSMContext):
     # статус пользователя -> выбор существует ли штрихкод
     await state.set_state(ScanBarcode.choosing_barcode_existance)
 
+@router.message(StateFilter(None), Command("scan_barcode"))
+@router.message(DBStates.creating_db, Command("scan_barcode"))
+async def cant_scan_barcode(message: types.Message):
+    await message.reply(
+        "Вы не можете включить режим сканирования, пока не создана база данных. "
+        "Для создания базы данных используйте команду /create_db"
+    )
 
-# @router.callback_query(F.data == "back_from_scan_barcode")
 @router.message(ScanBarcode.choosing_barcode_existance, F.text.lower() == "назад")
 async def scan_barcode_back(message: types.Message, state: FSMContext):
     await message.answer(
         "Вы вышли из режима сканирования штрихкодов.",
         reply_markup=types.ReplyKeyboardRemove()
     )
-    # статус пользователя -> None
-    await state.clear()
+    # статус пользователя -> бд существует
+    await state.set_state(DBStates.db_exist)
 
 
 # @router.callback_query(F.data == "barcode_exist")
@@ -307,7 +303,8 @@ async def waiting_for_order_id(message: types.Message, state: FSMContext):
 @router.message(ScanBarcode.waiting_for_order_id, ~F.text.isdecimal())
 async def incorrect_order_id(message: types.Message):
     await message.reply(
-        "С номером заказа что-то не так. Попробуйте ещё раз"
+        "С номером заказа что-то не так. Попробуйте ещё раз",
+        reply_markup=get_waiting_order_id_kb()
     )
 @router.message(ScanBarcode.waiting_for_product, F.text.in_(text.chemicals))
 async def product_selected(message: types.Message, state: FSMContext):
@@ -324,7 +321,10 @@ async def product_selected(message: types.Message, state: FSMContext):
     await state.set_state(ScanBarcode.eurocube_found)
 @router.message(ScanBarcode.waiting_for_product, ~F.text.in_(text.chemicals))
 async def product_selected(message: types.Message):
-    await message.reply("Такого химиката в базе нет. Попробуйте ещё раз")
+    await message.reply(
+        "Такого химиката в базе нет. Попробуйте ещё раз",
+        reply_markup=get_products_names_kb()
+    )
 
 
 

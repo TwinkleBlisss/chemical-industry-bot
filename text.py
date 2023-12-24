@@ -28,7 +28,27 @@ tables_name = {
         "order_list": "Товары в заказе",
         "orders": "Заказы",
         "partners": "Клиенты"
-    }
+}
+
+tables_name_reversed = {
+    "Штрихкоды": "barcodes",
+    "Еврокубы": "eurocubes",
+    "События": "actions",
+    "Товары": "products",
+    "Товары в заказе": "order_list",
+    "Заказы": "orders",
+    "Клиенты": "partners"
+ }
+
+tables_operations = {
+        "barcodes": ["show_table", "add_row", "update_row", "delete_row"],
+        "eurocubes": ["show_table", "add_row", "update_row", "delete_row", "clear_table"],
+        "actions": ["show_table", "add_row", "update_row", "delete_row"],
+        "products": ["show_table", "add_row", "update_row", "delete_row"],
+        "order_list": ["show_table", "add_row", "update_row", "delete_row"],
+        "orders": ["show_table", "add_row", "update_row", "delete_row"],
+        "partners": ["show_table", "add_row", "update_row", "delete_row"]
+}
 
 chemicals = [
     "Азотная кислота",

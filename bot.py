@@ -6,6 +6,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config_reader import config
 from handlers import general_commands, db_commands, scanning_barcodes
 
+from database.db_usage import Connection
+
+conn = Connection("test")
 
 # Запуск процесса пуллинга новых апдейтов
 async def main():

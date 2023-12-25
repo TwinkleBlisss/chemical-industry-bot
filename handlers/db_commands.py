@@ -9,6 +9,8 @@ from keyboards.db_keyboards import (
 from states import DBStates
 import text
 
+from connection import conn
+
 """
 Здесь будут команды create_db / show_db и тд
 """
@@ -37,7 +39,7 @@ async def create_db_exist(message: types.Message):
 @router.message(DBStates.creating_db, F.text.lower() == "да")
 async def create_db_yes(message: types.Message, state: FSMContext):
 
-    # логика создания БД...
+    conn.create_db("chemical-industry-database")
 
     await message.reply(
         "База данных создана!",

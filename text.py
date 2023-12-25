@@ -22,22 +22,22 @@ all_commands = [
 
 tables_name = {
         "barcodes": "Штрихкоды",
-        "eurocubes": "Еврокубы",
+        "eurocube": "Еврокубы",
         "actions": "События",
-        "products": "Товары",
+        "product": "Товары",
         "order_list": "Товары в заказе",
-        "orders": "Заказы",
-        "partners": "Клиенты"
+        "order": "Заказы",
+        "partner": "Клиенты"
 }
 
 tables_name_reversed = {
     "Штрихкоды": "barcodes",
-    "Еврокубы": "eurocubes",
+    "Еврокубы": "eurocube",
     "События": "actions",
-    "Товары": "products",
+    "Товары": "product",
     "Товары в заказе": "order_list",
-    "Заказы": "orders",
-    "Клиенты": "partners"
+    "Заказы": "order",
+    "Клиенты": "partner "
  }
 
 tables_operations = {

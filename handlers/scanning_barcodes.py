@@ -1,5 +1,3 @@
-from bot import conn
-
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -12,12 +10,10 @@ from keyboards.scanning_keyboards import (
     get_waiting_order_id_kb,
     get_products_names_kb
 )
+from connection import conn
 from states import DBStates, ScanBarcode
 import text
 import os
-
-
-
 
 """
 Здесь будут команды режима scan_barcode
@@ -40,6 +36,7 @@ async def cmd_scan_barcode(message: types.Message, state: FSMContext):
     # статус пользователя -> выбор существует ли штрихкод
     await state.set_state(ScanBarcode.choosing_barcode_existance)
 
+
 @router.message(StateFilter(None), Command("scan_barcode"))
 @router.message(DBStates.creating_db, Command("scan_barcode"))
 async def cant_scan_barcode(message: types.Message):
@@ -47,6 +44,7 @@ async def cant_scan_barcode(message: types.Message):
         "Вы не можете включить режим сканирования, пока не создана база данных. "
         "Для создания базы данных используйте команду /create_db"
     )
+
 
 @router.message(ScanBarcode.choosing_barcode_existance, F.text.lower() == "назад")
 async def scan_barcode_back(message: types.Message, state: FSMContext):
@@ -102,19 +100,8 @@ def barcode_recognizing(path):
         # получение результата
         barcode_id = recognized_results[0].code_text
         return barcode_id
-
     except:
-        print("Pizda")
-    """
-    # переименовывание файла
-    try:
-        os.rename(path, f"tmp/{barcode_id}.jpg")
-    except FileNotFoundError:
-        print("Файл не найден")
-    except PermissionError:
-        print("Нет доступа для переименования файла")
-    """
-
+        print("Problem with barcode recognition!")
 
 
 @router.message(ScanBarcode.waiting_for_existing_photo, F.photo)
@@ -134,22 +121,20 @@ async def existing_barcode(message: types.Message, state: FSMContext, bot: Bot):
         pass
 
     # ищем нужный еврокуб
+    """
+   1) Распознаём номер штрихкода.
+   2) Ищем нужный штрихкод в таблице barcodes.
+   3) Переходим к объекту еврокуба.
+   """
     eurocube = conn.scan_barcode(barcode_id)
     if not eurocube:
         await message.reply(
-            "Еврокуба с таким штрихкодом нет в базе. Вернитесь назад и добавьте штрихкод.",
-            reply_markup=get_scan_barcode_kb()
+            "Еврокуба с таким штрихкодом нет в базе. Добавьте штрихкод как новый.",
+            reply_markup=get_upload_barcode_kb()
         )
+        await state.set_state(ScanBarcode.waiting_for_new_photo)
         return
     eurocube_id = eurocube[0][0]
-
-
-
-    """
-    1) Распознаём номер штрихкода.
-    2) Ищем нужный штрихкод в таблице barcodes.
-    3) Переходим к объекту еврокуба.
-    """
 
     await message.reply(
         f"Еврокуб с id={eurocube_id} успешно идентифицирован по штрихкоду с id={barcode_id}!",
@@ -182,7 +167,6 @@ async def new_barcode(message: types.Message, state: FSMContext, bot: Bot):
         pass
 
     # регистрируем нужный еврокуб
-
     """
     Здесь мы обращаемся к бд, чтобы:
     1) Создать объект штрихкода, еврокуба и их связи.
@@ -190,10 +174,18 @@ async def new_barcode(message: types.Message, state: FSMContext, bot: Bot):
     """
     conn.insert_into_table("eurocube", barcode_id, "1994-03-17", 0)
     eurocube_id = conn.scan_barcode(barcode_id)[0][0]
+
+    # проверяем есть ли штрихкод в базе
+    # if eurocube_id:
+    #     await message.reply(
+    #         f"По штрихкоду с id={barcode_id} в базе был найден еврокуб с id={eurocube_id}."
+    #     )
+    # else:
     await message.reply(
         f"Еврокуб с id={eurocube_id} успешно зарегистрирован по штрихкоду с id={barcode_id}!",
         reply_markup=types.ReplyKeyboardRemove()
     )
+
     await message.answer(
         "Что вы хотите сделать с еврокубом?",
         reply_markup=get_eurocube_found_kb()
@@ -208,7 +200,7 @@ async def new_barcode(message: types.Message, state: FSMContext, bot: Bot):
 @router.message(ScanBarcode.waiting_for_new_photo, ~F.photo)
 @router.message(ScanBarcode.waiting_for_add_photo, ~F.photo, F.text.lower() != "назад")
 async def not_a_photo(message: types.Message):
-    await message.answer("Это не фото! Попробуйте ещё раз")
+    await message.answer("Это не фото! Попробуйте ещё раз", reply_markup=get_upload_barcode_kb())
 
 
 @router.message(ScanBarcode.waiting_for_add_photo, F.text.lower() == "назад")
@@ -219,6 +211,8 @@ async def menu_eurocube(message: types.Message, state: FSMContext):
         "Что вы хотите сделать с еврокубом?",
         reply_markup=get_eurocube_found_kb()
     )
+
+
 @router.message(ScanBarcode.eurocube_found, F.text.startswith("Добавить"))
 async def add_barcode(message: types.Message, state: FSMContext):
     await message.answer(
@@ -227,6 +221,8 @@ async def add_barcode(message: types.Message, state: FSMContext):
     )
     # статус пользователя -> ожидание фото дополнительного штрихкода куба
     await state.set_state(ScanBarcode.waiting_for_add_photo)
+
+
 @router.message(ScanBarcode.waiting_for_add_photo, F.photo)
 async def upload_additional_barcode(message: types.Message, state: FSMContext, bot: Bot):
     path = f"tmp/{message.photo[-1].file_id}.jpg"
@@ -236,8 +232,7 @@ async def upload_additional_barcode(message: types.Message, state: FSMContext, b
     )
 
     data = await state.get_data()
-    eurocube_id = data['eurocube_found'] # ЭТО ТЕСТ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-    # ФУНКЦИЯ В РАЗРАБОТКЕ!!!!!!!!!!
+    eurocube_id = data['eurocube_found']
 
     # сканируем штрихкод
     barcode_id = barcode_recognizing(path)
@@ -254,7 +249,7 @@ async def upload_additional_barcode(message: types.Message, state: FSMContext, b
     conn.insert_into_table("barcodes", barcode_id, eurocube_id)
 
     await message.reply(
-        f"Штрихкод с id={barcode_id} успешно добавлен к еврокубу с id={eurocube_id}", # ЭТО ТЕСТ!!!!!
+        f"Штрихкод с id={barcode_id} успешно добавлен к еврокубу с id={eurocube_id}",  # ЭТО ТЕСТ!!!!!
         reply_markup=types.ReplyKeyboardRemove()
     )
     await message.answer(
@@ -263,6 +258,8 @@ async def upload_additional_barcode(message: types.Message, state: FSMContext, b
     )
     # статус пользователя -> куб найден
     await state.set_state(ScanBarcode.eurocube_found)
+
+
 @router.message(ScanBarcode.eurocube_found, F.text.startswith("Изменить"))
 @router.message(ScanBarcode.waiting_for_order_id, F.text.lower() == "назад")
 @router.message(ScanBarcode.waiting_for_product, F.text.lower() == "назад")
@@ -273,15 +270,21 @@ async def change_status(message: types.Message, state: FSMContext):
         "Выберите текущий статус еврокуба",
         reply_markup=get_change_status_kb()
     )
+
+
 @router.message(ScanBarcode.waiting_for_status, F.text.startswith("Прибыл"))
 async def status_arrived(message: types.Message, state: FSMContext):
     pass
     """
-    В БД  в таблицу actions добавляется запись о статусе куба (arrived).
+    В БД в таблицу actions добавляется запись о статусе куба (arrived).
     """
+    # получение eurocube_id
     data = await state.get_data()
     eurocube_id = data['eurocube_found']
+
+    # добавляем запись в бд
     conn.insert_into_table("actions", eurocube_id, "arrived")
+
     await message.reply("Статус записан!")
     await message.answer(
         "Что вы хотите сделать с еврокубом?",
@@ -289,29 +292,37 @@ async def status_arrived(message: types.Message, state: FSMContext):
     )
     # статус пользователя -> действия с еврокубом
     await state.set_state(ScanBarcode.eurocube_found)
+
+
 @router.message(ScanBarcode.waiting_for_status, F.text.startswith("Уезжает"))
 async def status_leaves(message: types.Message, state: FSMContext):
     pass
     """
     В БД  в таблицу actions добавляется запись о статусе куба (leaves).
     """
+    # получение eurocube_id
     data = await state.get_data()
     eurocube_id = data['eurocube_found']
+
+    # добавляем запись в бд
     conn.insert_into_table("actions", eurocube_id, "leaves")
+
     await message.reply(
         "Статус записан! Теперь введите номер заказа",
         reply_markup=get_waiting_order_id_kb()
     )
     # статус пользователя -> ожидание номера заказа
     await state.set_state(ScanBarcode.waiting_for_order_id)
+
+
 @router.message(ScanBarcode.waiting_for_order_id, F.text.isdecimal())
 async def waiting_for_order_id(message: types.Message, state: FSMContext):
     pass
     """
     Ищем в БД заказ по id.
     """
+    # проверяем есть ли заказ в базе
     order_id = conn.get_order(int(message.text))
-
     if order_id is None:
         await message.reply(
             "Такого заказа нет в базе. Введите заново или нажмите 'назад'.",
@@ -325,23 +336,33 @@ async def waiting_for_order_id(message: types.Message, state: FSMContext):
             "Заказ найден! Теперь выберите химикат, который зальют в еврокуб.",
             reply_markup=get_products_names_kb()
         )
+
+
 @router.message(ScanBarcode.waiting_for_order_id, ~F.text.isdecimal())
 async def incorrect_order_id(message: types.Message):
     await message.reply(
         "С номером заказа что-то не так. Попробуйте ещё раз",
         reply_markup=get_waiting_order_id_kb()
     )
+
+
 @router.message(ScanBarcode.waiting_for_product, F.text.in_(text.chemicals))
 async def product_selected(message: types.Message, state: FSMContext):
     pass
     """
     В БД обновляется таблица order_list. 
     """
+    # получение eurocube_id и product_id
     data = await state.get_data()
     order_id = data.get("order_id")
     eurocube_id = data.get("eurocube_found")
+
+    # поиск product_id в базе по названию химиката
     product_id = conn.get_product_id(message.text)
+
+    # обновляем нужную строчку в order_list
     conn.update_table("order_list", order_id, eurocube_id, product_id)
+
     await message.reply("Химикат выбран!")
     await message.answer(
         "Что вы хотите сделать с еврокубом?",
@@ -349,13 +370,14 @@ async def product_selected(message: types.Message, state: FSMContext):
     )
     # статус пользователя -> действия с еврокубом
     await state.set_state(ScanBarcode.eurocube_found)
+
+
 @router.message(ScanBarcode.waiting_for_product, ~F.text.in_(text.chemicals))
 async def product_selected(message: types.Message):
     await message.reply(
         "Такого химиката в базе нет. Попробуйте ещё раз",
         reply_markup=get_products_names_kb()
     )
-
 
 
 @router.message(

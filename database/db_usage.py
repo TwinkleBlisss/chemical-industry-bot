@@ -7,7 +7,7 @@ import os
 class Connection:
     def __init__(self, database_name: str):
         try:
-            self.conn = psycopg2.connect(dbname=database_name, user='postgres', password='0793', host='127.0.0.1')
+            self.conn = psycopg2.connect(dbname=database_name, user='postgres', password='12345', host='127.0.0.1')
             self.cursor = self.conn.cursor()
             self.conn.set_session(autocommit=True)
             with open("database/sql/init_db.sql") as f:
@@ -17,8 +17,10 @@ class Connection:
             with open("database/sql/create_all_tables.sql") as f:
                 self.cursor.execute(f.read())
                 self.conn.commit()
+
             # self.cursor.callproc("create_all_tables", [])
             # self.conn.commit()
+
             with open("database/sql/requests.sql") as f:
                 self.cursor.execute(f.read())
                 self.conn.commit()
@@ -57,7 +59,6 @@ class Connection:
         self.cursor.callproc(f'add_{table_name}', args)
         self.conn.commit()
 
-
     def add_action(self, id: int, text: str):
         self.cursor.callproc("add_actions", [id, sql.Identifier(text)])
         self.conn.commit()
@@ -68,9 +69,8 @@ class Connection:
     def update_table(self, table_name: str, *args):
         self.cursor.callproc(f'update_{table_name}', args)
 
-    def delete_table(self, table_name: str, *args):
+    def delete_from_table(self, table_name: str, *args):
         self.cursor.callproc(f'delete_from_{table_name}', args)
-
 
     def scan_barcode(self, barcode_id: int) -> list:
         self.cursor.callproc('scan_barcode', [barcode_id])
@@ -83,4 +83,3 @@ class Connection:
     def get_product_id(self, name: str) -> int:
         self.cursor.callproc('get_product_id', [name])
         return self.cursor.fetchall()
-

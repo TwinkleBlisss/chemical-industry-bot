@@ -7,6 +7,13 @@ class DBStates(StatesGroup):
     db_exist = State()
     show_db = State()
     table_menu = State()
+    in_table = State()
+    waiting_add_row = State()
+    waiting_update_row_number = State()
+    waiting_update_row_data = State()
+    waiting_delete_row_number = State()
+    waiting_delete_row_agree = State()
+    waiting_clear_table = State()
 
 
 class ScanBarcode(StatesGroup):

@@ -8,7 +8,7 @@ from handlers import general_commands, db_commands, scanning_barcodes
 
 from database.db_usage import Connection
 
-conn = Connection("test")
+# conn = Connection("test")
 
 # Запуск процесса пуллинга новых апдейтов
 async def main():

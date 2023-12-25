@@ -39,3 +39,7 @@ RETURNS void as $$
     DELETE FROM product;
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION clear_partner()
+RETURNS void as $$
+    DELETE FROM partner;
+$$ LANGUAGE sql;

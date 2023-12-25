@@ -15,6 +15,7 @@ all_commands = [
     "/cancel",
     "/id",
     "/name",
+    "/random"
     "/create_db",
     "/show_db",
     "/scan_barcode"
@@ -37,17 +38,25 @@ tables_name_reversed = {
     "Товары": "product",
     "Товары в заказе": "order_list",
     "Заказы": "order",
-    "Клиенты": "partner "
+    "Клиенты": "partner"
  }
 
+operations_starts = [
+    "Показать",
+    "Внести",
+    "Заменить",
+    "Удалить",
+    "Очистить"
+]
+
 tables_operations = {
-        "barcodes": ["show_table", "add_row", "update_row", "delete_row"],
-        "eurocubes": ["show_table", "add_row", "update_row", "delete_row", "clear_table"],
-        "actions": ["show_table", "add_row", "update_row", "delete_row"],
-        "products": ["show_table", "add_row", "update_row", "delete_row"],
-        "order_list": ["show_table", "add_row", "update_row", "delete_row"],
-        "orders": ["show_table", "add_row", "update_row", "delete_row"],
-        "partners": ["show_table", "add_row", "update_row", "delete_row"]
+        "barcodes": ["show_table", "delete_row"],
+        "eurocube": ["show_table"],
+        "actions": ["show_table", "delete_row", "clear_table"],
+        "product": ["show_table"],
+        "order_list": ["show_table"],
+        "order": ["show_table"],
+        "partner": ["show_table"]
 }
 
 chemicals = [
@@ -57,3 +66,13 @@ chemicals = [
     "Ортофосфорная кислота",
     "Натр едкий"
 ]
+
+tables_columns = {
+        "barcodes": ("id", "eurocube_id", "last_check"),
+        "eurocube": ("id", "date_of_manufacture", "usage_count"),
+        "actions": ("id", "eurocube_id", "status", "action_date"),
+        "product": ("id", "name", "danger_level", "cost_per_ton"),
+        "order_list": ("order_id", "eurocube_id", "product_id", "eurocube_return"),
+        "order": ("id", "partner_id", "cost", "order_date"),
+        "partner": ("id", "name", "tin", "ogrn", "city", "street", "building")
+}

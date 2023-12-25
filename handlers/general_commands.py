@@ -7,6 +7,7 @@ from keyboards.general_keyboards import (
     get_bot_info_kb,
     get_random_kb
 )
+from states import DBStates
 import text
 
 """
@@ -18,12 +19,14 @@ router = Router()
 
 # /start
 @router.message(StateFilter(None), Command("start"))
-async def cmd_start(message: types.Message):
-    await message.answer(text.start_phrase)
+async def cmd_start(message: types.Message, state: FSMContext):
+    await message.answer(text.start_phrase, reply_markup=types.ReplyKeyboardRemove())
+    await state.set_state(DBStates.db_exist)
 
 
 # /bot_info
 @router.message(StateFilter(None), Command("bot_info"))
+@router.message(DBStates.db_exist, Command("bot_info"))
 async def cmd_bot_info(message: types.Message):
     await message.answer(
         'Выберите ссылку',
@@ -33,6 +36,7 @@ async def cmd_bot_info(message: types.Message):
 
 # /id
 @router.message(StateFilter(None), Command("id"))
+@router.message(DBStates.db_exist, Command("id"))
 async def cmd_id(message: types.Message):
     await message.answer(
         f"Ваш id: {message.from_user.id}"
@@ -41,6 +45,7 @@ async def cmd_id(message: types.Message):
 
 # /name
 @router.message(StateFilter(None), Command("name"))
+@router.message(DBStates.db_exist, Command("name"))
 async def cmd_name(message: types.Message):
     await message.answer(
         f"Вас зовут <b>{message.from_user.full_name}</b>!",
@@ -66,7 +71,7 @@ async def send_random_value(callback: types.CallbackQuery):
 @router.message(StateFilter(None), Command("cancel"))
 async def cmd_cancel(message: types.Message):
     await message.answer(
-        "Отменять нечего",
+        "Отменять нечего, но клавиатура скрыта.",
         reply_markup=types.ReplyKeyboardRemove()
     )
 

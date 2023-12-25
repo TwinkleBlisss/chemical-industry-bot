@@ -32,6 +32,11 @@ RETURNS void as $$
     INSERT INTO product(name, danger_level, cost_per_ton) VALUES (name, danger_level, cost_per_ton);
 $$ LANGUAGE sql;
 
+CREATE OR REPLACE FUNCTION add_partner(name text, tin integer, ogrn integer, city text, street text, building integer)
+RETURNS void as $$
+    INSERT INTO partner(name, tin, ogrn, city, street, building) VALUES (name, tin, ogrn, city, street, building);
+$$ LANGUAGE sql;
+
 
 CREATE OR REPLACE FUNCTION get_order(order_id integer)
 RETURNS integer as $$

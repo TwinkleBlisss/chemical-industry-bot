@@ -50,9 +50,9 @@ RETURNS void as $$
 $$ LANGUAGE sql;
 
 
-CREATE OR REPLACE FUNCTION add_order_list(order_id integer, eurocube_id integer)
+CREATE OR REPLACE FUNCTION add_order_list(order_id integer, eurocube_id integer, product_id integer)
 RETURNS void AS $$
-    INSERT INTO order_list(order_id, eurocube_id) VALUES (order_id, eurocube_id)
+    INSERT INTO order_list(order_id, eurocube_id, product_id) VALUES (order_id, eurocube_id, product_id)
 $$ LANGUAGE sql;
 
 
@@ -60,6 +60,13 @@ CREATE OR REPLACE FUNCTION get_product_id(name text)
 RETURNS integer as $$
     SELECT id FROM product WHERE product.name = name;
 $$ LANGUAGE sql;
+
+
+CREATE OR REPLACE FUNCTION delete_product(name text)
+RETURNS void as $$
+    DELETE FROM product WHERE product.name = name;
+$$ LANGUAGE sql;
+
 
 
 CREATE OR REPLACE FUNCTION change_usage_count()

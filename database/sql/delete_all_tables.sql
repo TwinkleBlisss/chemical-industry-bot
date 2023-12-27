@@ -1,6 +1,9 @@
-CREATE OR REPLACE FUNCTION delete_from_barcodes(id integer)
+DROP FUNCTION IF EXISTS delete_from_barcodes(input_id integer);
+DROP FUNCTION IF EXISTS delete_from_actions(integer);
+
+CREATE OR REPLACE FUNCTION delete_from_barcodes(input_id integer)
 RETURNS void as $$
-    DELETE FROM barcodes WHERE barcodes.id = id;
+    DELETE FROM barcodes WHERE barcodes.id = input_id;
 $$ LANGUAGE sql;
 
 
@@ -28,9 +31,9 @@ RETURNS void as $$
 $$ LANGUAGE sql;
 
 
-CREATE OR REPLACE FUNCTION delete_from_actions(id integer)
+CREATE OR REPLACE FUNCTION delete_from_actions(input_id integer)
 RETURNS void as $$
-    DELETE FROM actions WHERE actions.id = id;
+    DELETE FROM actions WHERE actions.id = input_id;
 $$ LANGUAGE sql;
 
 

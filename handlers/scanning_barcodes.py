@@ -322,13 +322,14 @@ async def waiting_for_order_id(message: types.Message, state: FSMContext):
     Ищем в БД заказ по id.
     """
     # проверяем есть ли заказ в базе
-    order_id = conn.get_order(int(message.text))
-    if order_id is None:
+    order = conn.get_order(int(message.text))
+    if order[0][0] is None:
         await message.reply(
             "Такого заказа нет в базе. Введите заново или нажмите 'назад'.",
             reply_markup=get_waiting_order_id_kb()
         )
     else:
+        order_id = order[0][0]
         # статус пользователя -> ожидание названия химиката
         await state.set_state(ScanBarcode.waiting_for_product)
         await state.update_data(order_id=order_id)
@@ -358,10 +359,10 @@ async def product_selected(message: types.Message, state: FSMContext):
     eurocube_id = data.get("eurocube_found")
 
     # поиск product_id в базе по названию химиката
-    product_id = conn.get_product_id(message.text)
+    product_id = conn.get_product_id(message.text)[0][0]
 
     # обновляем нужную строчку в order_list
-    conn.update_table("order_list", order_id, eurocube_id, product_id)
+    conn.insert_into_table("order_list", order_id, eurocube_id, product_id)
 
     await message.reply("Химикат выбран!")
     await message.answer(

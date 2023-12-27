@@ -7,39 +7,39 @@ import os
 class Connection:
     def __init__(self, database_name: str):
         try:
-            self.conn = psycopg2.connect(dbname=database_name, user='postgres', password='12345', host='127.0.0.1')
+            self.conn = psycopg2.connect(dbname=database_name, user='postgres', password='0793', host='127.0.0.1')
             self.cursor = self.conn.cursor()
             self.conn.set_session(autocommit=True)
-            with open("database/sql/init_db.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            with open("database/sql/create_all_tables.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            # self.cursor.callproc("create_all_tables", [])
-            # self.conn.commit()
-
-            with open("database/sql/requests.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            with open("database/sql/get_all_tables.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            with open("database/sql/clear_all_tables.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            with open("database/sql/delete_all_tables.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
-
-            with open("database/sql/update_all_tables.sql") as f:
-                self.cursor.execute(f.read())
-                self.conn.commit()
+            # with open("database/sql/init_db.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # with open("database/sql/create_all_tables.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # # self.cursor.callproc("create_all_tables", [])
+            # # self.conn.commit()
+            #
+            # with open("database/sql/requests.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # with open("database/sql/get_all_tables.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # with open("database/sql/clear_all_tables.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # with open("database/sql/delete_all_tables.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
+            #
+            # with open("database/sql/update_all_tables.sql") as f:
+            #     self.cursor.execute(f.read())
+            #     self.conn.commit()
 
         except:
             raise RuntimeError('Can`t establish connection to database')
@@ -83,3 +83,7 @@ class Connection:
     def get_product_id(self, name: str) -> int:
         self.cursor.callproc('get_product_id', [name])
         return self.cursor.fetchall()
+
+    def delete_products(self, name: str):
+        self.cursor.callproc('delete_product', [name])
+
